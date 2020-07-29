@@ -5,49 +5,21 @@
 from tangle import Tangle
 from block import Block
 from iota_node import IOTANode
-from tkinter import *
 import networkx as NX
 import matplotlib
 import random
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import mpld3
 
-
+import networkx as nx
+from bokeh.io import output_file, show
+from bokeh.models import (BoxZoomTool, Circle, HoverTool,
+                          MultiLine, Plot, Range1d, ResetTool,StaticLayoutProvider,PanTool)
+from bokeh.palettes import Spectral4
+from bokeh.plotting import from_networkx
 
 class simEnv:
 
     def setupWindow(self,tangle,node):
-        mainWindow = Tk()
-        mainWindow.title("IOTA Simulation")
-        globalX = 2000
-        globalY = 1000
-        mainWindow.geometry([str(globalX) + "x" + str(globalY)])
-
-        # Setup Basic Frames
-        inputX = 200
-        graphX = globalX - inputX - inputX / 2
-        inputY = globalY
-        # inputFrame = Frame(mainWindow, width=inputX, height=inputY, background="#828282")
-        # graphFrame = Frame(mainWindow, width=graphX, height=inputY, background="#4287f5")
-        # graphFrame.place(x=0, y=0)
-        # inputFrame.place(x=graphX, y=0)
-        #
-        # # Setup Widgets
-        # widgetWidth = 50
-        # selectLabel = Label(inputFrame, text="User Options:")
-        # selectLabel.pack()
-        # # TODO: add drawing functionality to adding trxn
-        # trxnButton = Button(inputFrame, text="Add trxn", command=lambda: self.addTrxn(tangle,node))
-        # trxnButton.pack()
-
-        # tempLabel = Label(graphFrame,text="MEMES")
-        # tempLabel.place(x=50,y=500)
-
-        self.workingWindow = mainWindow
         self.workingTangle = tangle
-        return mainWindow
 
     # Wrapper for adding trxn to tangle
     def addTrxn(self,workTangle,workNode):
@@ -81,12 +53,13 @@ class simEnv:
         for key,values in trxns.items():
             if len(values) == 0:
                 # Genesis block
-                G.add_node(key,posX=genPosX,posY=genPos1 if not gotBranch else genPos2)
+                G.add_node(key,posX=genPosX,posY=genPos1 if not gotBranch else genPos2,nodeIdx='Genesis',hash="N/A")
                 gotBranch = True
                 # genList.append(key)
             else:
                 # nongenesis block
-                G.add_node(key,posX=0,posY=0)
+                G.add_node(key,posX=0,posY=0,nodeIdx=tipCntr,hash=key)
+                tipCntr += 1
                 for entry in values:
                     G.add_edge(key,entry)
 
@@ -107,23 +80,22 @@ class simEnv:
             genPos[node] = [G.nodes[node]['posX'], G.nodes[node]['posY']]
 
 
-        # Relabel hash nodes for easier viewing
+        # Setup renderer
+        graph_renderer = from_networkx(G, nx.spring_layout, scale=1, center=(0, 0))
+        fixed_layout = genPos
+        fixed_layout_provider = StaticLayoutProvider(graph_layout=fixed_layout)
+        graph_renderer.layout_provider = fixed_layout_provider
+        graph_renderer.node_renderer.glyph = Circle(size=15, fill_color=Spectral4[0])
+        graph_renderer.edge_renderer.glyph = MultiLine(line_alpha=0.8, line_width=1)
 
-        f = plt.Figure(figsize=(5, 4), dpi=100)
-        a = f.add_subplot(111)
-        pos = NX.spring_layout(G,fixed=genList,pos=genPos)
-
-        NX.draw(G, pos, ax=a)
-        NX.draw_networkx_labels(G,pos,ax=a)
-        ######################
-
-        # a tk.DrawingArea
-        canvas = FigureCanvasTkAgg(f, master=self.workingWindow)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
-
-
-        # button = Tk.Button(master=root, text='Quit', command=sys.exit)
-        # button.pack(side=Tk.BOTTOM)
+        # Show with Bokeh
+        plot = Plot(plot_width=1000, plot_height=1000,
+                    x_range=Range1d(0, 1000), y_range=Range1d(500, 2000))
+        plot.title.text = "Graph Interaction Demonstration"
+        node_hover_tool = HoverTool(tooltips=[("nodeIdx", "@nodeIdx"),("hash","@hash")])
+        plot.add_tools(node_hover_tool, BoxZoomTool(), ResetTool(),PanTool())
+        plot.renderers.append(graph_renderer)
+        output_file("interactiveGUI.html")
+        show(plot)
 
 
