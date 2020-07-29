@@ -4,8 +4,10 @@ from tangle import Tangle
 from iota_node import IOTANode
 from block import Block
 from sim_env_file import simEnv
+from tkinter import *
 
 if __name__ == "__main__":
+
     # Initialize Objects for Simulation
     workEnv = simEnv()
     myTangle = Tangle()
@@ -13,6 +15,7 @@ if __name__ == "__main__":
 
     # Main tangle actors
     charlesNode = workEnv.createNode(myTangle,"charles",initBal=50)
+    mainWindow = workEnv.setupWindow(myTangle,charlesNode) # TODO: temp!
     satoshiNode = workEnv.createNode(myTangle,"satoshi",initBal=100)
     jagNode = workEnv.createNode(myTangle,"drjag",initBal=200)
     ericNode = workEnv.createNode(myTangle,"eric",initBal=25)
@@ -23,11 +26,19 @@ if __name__ == "__main__":
     # TODO: add networkx graph created from trxns
     workEnv.addTrxn(myTangle,charlesNode)
     workEnv.addTrxn(myTangle, charlesNode)
-
+    workEnv.addTrxn(myTangle, charlesNode)
+    workEnv.addTrxn(myTangle, charlesNode)
+    workEnv.addTrxn(myTangle, charlesNode)
+    workEnv.addTrxn(myTangle, charlesNode)
+    workEnv.addTrxn(myTangle, charlesNode)
+    workEnv.addTrxn(myTangle, charlesNode)
     # Create value transaction
     workEnv.addTrxnTransfer(myTangle,charlesNode,satoshiNode,25)
 
     # TODO: Create visual graph of transactions
     #Print Ledger with Trxns
-    print(myTangle.tData)
+    workEnv.showTangleData()
+    # print(myTangle.tData)
+
+    mainWindow.mainloop()
 
