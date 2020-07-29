@@ -10,11 +10,17 @@ if __name__ == "__main__":
     workEnv = simEnv()
     myTangle = Tangle()
     networkNodes = []
+
+    # Main tangle actors
     charlesNode = workEnv.createNode(myTangle,"charles",initBal=50)
     satoshiNode = workEnv.createNode(myTangle,"satoshi",initBal=100)
+    jagNode = workEnv.createNode(myTangle,"drjag",initBal=200)
+    ericNode = workEnv.createNode(myTangle,"eric",initBal=25)
+    emilyNode = workEnv.createNode(myTangle,"emily",initBal=500)
 
     # Build tangle
     # TODO: Create discrete-time script of adding to tangle
+    # TODO: add networkx graph created from trxns
     workEnv.addTrxn(myTangle,charlesNode)
     workEnv.addTrxn(myTangle, charlesNode)
 
