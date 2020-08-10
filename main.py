@@ -1,13 +1,12 @@
 
-
-# published in https://medium.com/@stkubr/simple-directed-acyclic-graph-iota-like-implementation-in-python-8e07677c55b5
+# Started from simple iota tutorial and expanded upon with functions from official Python IOTA API client.
+# Published in https://medium.com/@stkubr/simple-directed-acyclic-graph-iota-like-implementation-in-python-8e07677c55b5
 
 from tangle import Tangle
 from sim_env_file import simEnv
 import random
 import logging
 logger = logging.getLogger(__name__)
-
 
 def configure_logging():
     root_logger = logging.getLogger()
@@ -26,8 +25,8 @@ def configure_logging():
     # set logging level for root logger
     root_logger.setLevel("INFO")
 
-
 if __name__ == "__main__":
+    # Configure logger for logging...
     configure_logging()
     logger.info("Setting up environment...")
     # Initialize Objects for Simulation
@@ -43,22 +42,19 @@ if __name__ == "__main__":
     ericNode = workEnv.createNode(myTangle,"eric",initBal=25)
     emilyNode = workEnv.createNode(myTangle,"emily",initBal=500)
 
-    # Build tangle
-
-    # TODO: Create discrete-time script of adding to tangle (back-burner)
+    # Build tangle with empty trxns
     numTrxns = 20
     logger.info("Building basic tangle with " + str(numTrxns) + " trxns...")
     for i in range(numTrxns):
+        logger.info("Generating {}/{}...".format(i+1,numTrxns))
         selectInt = random.randint(0, len(workEnv.simNodes) - 1)
         workEnv.addTrxn(myTangle, workEnv.simNodes[selectInt])
-        workEnv.addTrxn(myTangle, charlesNode)
 
     #Print Ledger with Trxns
     logger.info("Tangle initialization done!")
     logger.info("Generating graph and GUI...")
     workEnv.genGraph()
     workEnv.mainloop()
-    # workEnv.showTangleData()
 
 
 

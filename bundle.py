@@ -1,11 +1,6 @@
 import time
-import hashlib
-from collections import OrderedDict
-from iota.crypto.kerl import Kerl
-# from workClasses.tangle import Tangle
-import sys
-# from tangle import Tangle
-# Block class handles management of individual transaction data on the tangle.
+
+# Bundle class handles management of individual transaction data on the tangle.
 class Bundle:
     def __init__(self, tips,tipObjects, node):
         self.node = node # Can be None for genesis
@@ -21,7 +16,8 @@ class Bundle:
             self.branchObj = None
             self.trunkObj = None
             self.data_payload = "GENESIS"
-            self.bundle_hash = "GENESIS" #TODO: Change to IOTA seed?
+            self.bundle_hash = "GENESIS" # Fine for IOTA, transaction hash representation needs to be shorter that
+                                         # 81 Trytes.
 
         self.timestamp = time.time()
         self.trxns = []
@@ -42,6 +38,8 @@ class Bundle:
     def addTrxn(self,trxnObject):
         self.trxns.append(trxnObject)
         trxnObject.idx = len(self.trxns) - 1
+        if trxnObject.idx == 0:
+            self.tail_transaction = trxnObject
 
     def __len__(self):
         return len(self.trxns)

@@ -38,7 +38,6 @@ class Tangle:
                     self.tData[bundle.get_hash()] = {'data_payload': bundle.data_payload,
                                                      'value_payload': bundle.value_tx}
             else:
-                # TODO: Incorporate PoW
                 logHash = bundle.get_hash()
                 self.tGraph[logHash] = [bundle.branch, bundle.trunk]
                 self.tData[logHash] = bundle.data_payload

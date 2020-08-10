@@ -1,21 +1,19 @@
 # Represents a simulation environment that simulates a tangle in IOTA.
 # Simulation env assumes each IOTA node has the same view of the tangle.
 # Also has several wrappers to simplify commands from main file
-
-from tangle import Tangle
 from bundle import Bundle
 from iota_node import IOTANode
 import networkx as NX
 import matplotlib.pyplot as plt
 from trxn import Trxn
-from matplotlib.pyplot import plot, draw, show
 import tkinter as tk
 import random
-import networkx as nx
-import time
 global fig, ax
 import copy
+import logging
+logger = logging.getLogger(__name__)
 
+# Class used for simulation environment for Tangle and nodes generating 'simple' transactions.
 class simEnv(tk.Tk):
 
     def __init__(self,tangle, *args, **kwargs):
@@ -23,17 +21,16 @@ class simEnv(tk.Tk):
         self.geometry("500x500")
         self.label = tk.Label(text="DAG Simulation GUI")
         self.label.pack(padx=10, pady=10)
-        self.addButton = tk.Button(text="Add trxn",command=self.GUIButtonFunc)
+        self.addButton = tk.Button(text="Add trxn",command=self.addTangleTrxn)
         self.addButton.pack()
         self.dispButton = tk.Button(text="Display Tangle",command=self.showTangleData)
         self.dispButton.pack()
-        self.moveButton = tk.Button(text="Move Currency",command=self.moveMoneyExample)
+        self.moveButton = tk.Button(text="Move Currency",command=self.moveCryptoExample)
         self.moveButton.pack()
         self.title("DAG Example GUI")
         self.simNodes = []
         self.workingTangle = tangle
         self.firstDraw = True
-
 
     # Wrapper for adding trxn to tangle
     def addTrxn(self,workTangle,workNode):
@@ -46,8 +43,14 @@ class simEnv(tk.Tk):
         genBundle.addTrxn(Trxn(genBundle)) # Add non-value trxn
         workTangle.add_tx(genBundle) # Record bundle with transaction in tangle and do PoW
 
+    #TODO Add transfers functionality
     #Wrapper for adding real-value transaction to tangle
     def addTrxnTransfer(self,workTangle,sendNode,recNode,transAmount=5):
+        tips = workTangle.find_tips()
+        tipObjs = []
+        for tip in tips:
+            tipObjs.append(workTangle.bundleObjects.get(tip))
+
         value_block = Bundle(workTangle.find_tips(), sendNode)
         # add value transition in Bundle
         value_block.add_value_tx(sendNode, recNode, transAmount)
@@ -60,19 +63,18 @@ class simEnv(tk.Tk):
         self.simNodes.append(workNode)
         return workNode
 
+    # Generate networkx graph from tangle data
     def genGraph(self):
         # Create graph with networkx, plot in matplotlib
         G = NX.DiGraph()
-
         trxns = self.workingTangle.tGraph
         self.oldTrxns = copy.deepcopy(trxns)
-        # genList = []
         genPosX = 50
         genPos1 = 900
         genPos2 = 1100
         gotBranch = False
         tipCntr = 0
-        # genPos = {'genesis_branch':[50,900],'genesis_trunk':[50,1100]}
+
         for key, values in trxns.items():
             if values[0] is None:
                 # Genesis block
@@ -91,6 +93,7 @@ class simEnv(tk.Tk):
                     workX = G.nodes[neighbor]['posX']
                     xMax = workX if workX > xMax else xMax
 
+                # Place new node randomly in front of transactions it is referencing
                 xMax += 100
                 nodeY = random.randint(700, 1300)
                 G.nodes[key]['posX'] = xMax
@@ -99,10 +102,10 @@ class simEnv(tk.Tk):
         self.drawGraph = G
         self.oldCntr = tipCntr
 
+    # Updates graph for plotting with new transactions
     def updateGraph(self):
         # Create graph with networkx, plot in matplotlib
         G = self.drawGraph
-
         oldTrxns = self.oldTrxns
         trxns = self.workingTangle.tGraph
 
@@ -110,9 +113,7 @@ class simEnv(tk.Tk):
             if key in trxns:
                 trxns.pop(key)
 
-        gotBranch = False
         tipCntr = self.oldCntr
-        # genPos = {'genesis_branch':[50,900],'genesis_trunk':[50,1100]}
         for key, values in trxns.items():
             # nongenesis blocks
             G.add_node(key, posX=0, posY=0, nodeIdx=tipCntr, hash=key)
@@ -133,9 +134,7 @@ class simEnv(tk.Tk):
         self.drawGraph = G
         self.oldCntr = tipCntr
 
-
-
-
+    # Shows the current networkx graph generated from tangle data
     def showTangleData(self):
         # Draw manually for live plotting
         if self.firstDraw:
@@ -172,6 +171,7 @@ class simEnv(tk.Tk):
         else:
 
             self.updateGraph()
+            logger.info("Updated visual tangle!")
             fig, ax = plt.subplots()
 
             for node in self.drawGraph.nodes:
@@ -204,19 +204,18 @@ class simEnv(tk.Tk):
         plt.axis("off")
         plt.show()
 
-
-    def GUIButtonFunc(self):
+    #
+    def addTangleTrxn(self):
         selectInt = random.randint(0, len(self.simNodes) - 1)
         self.addTrxn(self.workingTangle,self.simNodes[selectInt])
         print("Added trxn from node " + self.simNodes[selectInt].name + "!")
 
     # TODO
-    def moveMoneyExample(self):
-
+    def moveCryptoExample(self):
         fromInt = random.randint(0, len(self.simNodes) - 1)
         toInt = random.randint(0, len(self.simNodes) - 1)
-        self.addTrxnTransfer(self.workingTangle, self.simNodes[fromInt], self.simNodes[toInt], 25)
-        print("Moved " + str(25) + " crypto from " + self.simNodes[fromInt].name + " to " + self.simNodes[toInt].name + "!")
+        self.addTrxnTransfer(self.workingTangle, self.simNodes[fromInt], self.simNodes[toInt])
+        print("Moved " + str(5) + " crypto from " + self.simNodes[fromInt].name + " to " + self.simNodes[toInt].name + "!")
 
 
 
