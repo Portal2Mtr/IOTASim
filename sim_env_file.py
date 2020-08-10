@@ -3,22 +3,18 @@
 # Also has several wrappers to simplify commands from main file
 
 from tangle import Tangle
-from block import Block
+from bundle import Bundle
 from iota_node import IOTANode
 import networkx as NX
 import matplotlib.pyplot as plt
+from trxn import Trxn
 from matplotlib.pyplot import plot, draw, show
 import tkinter as tk
 import random
 import networkx as nx
-from bokeh.io import output_file, show
-from bokeh.models import (BoxZoomTool, Circle, HoverTool,
-                          MultiLine, Plot, Range1d, ResetTool,StaticLayoutProvider,PanTool,Button, CustomJS, ColumnDataSource)
-from bokeh.palettes import Spectral4
-from bokeh.plotting import from_networkx
-from bokeh.layouts import *
 import time
 global fig, ax
+import copy
 
 class simEnv(tk.Tk):
 
@@ -41,12 +37,19 @@ class simEnv(tk.Tk):
 
     # Wrapper for adding trxn to tangle
     def addTrxn(self,workTangle,workNode):
-        workTangle.add_tx(Block(workTangle.find_tips(), workNode))
+        tips = workTangle.find_tips()
+        tipObjs = []
+        for tip in tips:
+            tipObjs.append(workTangle.bundleObjects.get(tip))
+
+        genBundle = Bundle(tips,tipObjs, workNode) # Generate basic bundle
+        genBundle.addTrxn(Trxn(genBundle)) # Add non-value trxn
+        workTangle.add_tx(genBundle) # Record bundle with transaction in tangle and do PoW
 
     #Wrapper for adding real-value transaction to tangle
     def addTrxnTransfer(self,workTangle,sendNode,recNode,transAmount=5):
-        value_block = Block(workTangle.find_tips(), sendNode)
-        # add value transition in block
+        value_block = Bundle(workTangle.find_tips(), sendNode)
+        # add value transition in Bundle
         value_block.add_value_tx(sendNode, recNode, transAmount)
         workTangle.add_tx(value_block)
 
@@ -62,6 +65,7 @@ class simEnv(tk.Tk):
         G = NX.DiGraph()
 
         trxns = self.workingTangle.tGraph
+        self.oldTrxns = copy.deepcopy(trxns)
         # genList = []
         genPosX = 50
         genPos1 = 900
@@ -70,7 +74,7 @@ class simEnv(tk.Tk):
         tipCntr = 0
         # genPos = {'genesis_branch':[50,900],'genesis_trunk':[50,1100]}
         for key, values in trxns.items():
-            if len(values) == 0:
+            if values[0] is None:
                 # Genesis block
                 G.add_node(key, posX=genPosX, posY=genPos1 if not gotBranch else genPos2, nodeIdx='Genesis', hash="N/A")
                 gotBranch = True
@@ -93,6 +97,43 @@ class simEnv(tk.Tk):
                 G.nodes[key]['posY'] = nodeY
 
         self.drawGraph = G
+        self.oldCntr = tipCntr
+
+    def updateGraph(self):
+        # Create graph with networkx, plot in matplotlib
+        G = self.drawGraph
+
+        oldTrxns = self.oldTrxns
+        trxns = self.workingTangle.tGraph
+
+        for key, values in oldTrxns.items():
+            if key in trxns:
+                trxns.pop(key)
+
+        gotBranch = False
+        tipCntr = self.oldCntr
+        # genPos = {'genesis_branch':[50,900],'genesis_trunk':[50,1100]}
+        for key, values in trxns.items():
+            # nongenesis blocks
+            G.add_node(key, posX=0, posY=0, nodeIdx=tipCntr, hash=key)
+            tipCntr += 1
+            for entry in values:
+                G.add_edge(key, entry)
+
+            xMax = 0
+            for neighbor in G.neighbors(key):
+                workX = G.nodes[neighbor]['posX']
+                xMax = workX if workX > xMax else xMax
+
+            xMax += 100
+            nodeY = random.randint(700, 1300)
+            G.nodes[key]['posX'] = xMax
+            G.nodes[key]['posY'] = nodeY
+
+        self.drawGraph = G
+        self.oldCntr = tipCntr
+
+
 
 
     def showTangleData(self):
@@ -130,7 +171,7 @@ class simEnv(tk.Tk):
 
         else:
 
-            self.genGraph()
+            self.updateGraph()
             fig, ax = plt.subplots()
 
             for node in self.drawGraph.nodes:
@@ -169,6 +210,7 @@ class simEnv(tk.Tk):
         self.addTrxn(self.workingTangle,self.simNodes[selectInt])
         print("Added trxn from node " + self.simNodes[selectInt].name + "!")
 
+    # TODO
     def moveMoneyExample(self):
 
         fromInt = random.randint(0, len(self.simNodes) - 1)
