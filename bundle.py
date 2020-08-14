@@ -1,9 +1,11 @@
 import time
-
+from trxn import Trxn
 # Bundle class handles management of individual transaction data on the tangle.
 class Bundle:
+
     def __init__(self, tips,tipObjects, node):
         self.node = node # Can be None for genesis
+        # Check if genesis bundle
         if tips is not None:
             (self.branch, self.trunk) = tips
             self.branchObj, self.trunkObj = tipObjects
@@ -21,21 +23,24 @@ class Bundle:
 
         self.timestamp = time.time()
         self.trxns = []
-
+        self.tail_transaction = None
 
     def add_value_tx(self, sender, receiver, amount):
-        self.value_tx = {'sender': sender.name,
-                         'receiver': receiver.name,
-                         'amount': amount,
-                         'signature': sender.sig,
-                         'senderID' : sender,
-                         'receiverID' : receiver
-                         }
+        # Generate two transactions, input w/ sig and output
+        self.inputTrxn = Trxn(self, -amount,isValue=True)
+        self.inputTrxn.senderAddr = sender.address
+        self.outputTrxn = Trxn(self,amount,isValue=False)
+        self.outputTrxn.recAddr = receiver.address
+        self.outputTrxn.recName = receiver.name
+        self.addTrxn(self.inputTrxn)
+        self.addTrxn(self.outputTrxn)
 
     def get_hash(self):
+        # Returns the tail transaction hash from the PoW done by the bundle's node.
         return self.node.calc_hash(self)
 
     def addTrxn(self,trxnObject):
+        # Adds a trxn to the trxns list and handles indexing for trxn.
         self.trxns.append(trxnObject)
         trxnObject.idx = len(self.trxns) - 1
         if trxnObject.idx == 0:
@@ -46,6 +51,8 @@ class Bundle:
 
     def __iter__(self):
         return iter(self.trxns)
+
+
 
 
 

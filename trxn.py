@@ -9,7 +9,7 @@ import math
 # Class for handling individual transactions
 class Trxn:
     #TODO: add support for value trxns
-    def __init__(self,bundle,value=0):
+    def __init__(self,bundle,value=0,isValue=False):
         self.bundle = bundle
         self.value = value
         self.timestamp = unix_timestamp(datetime.utcnow().timetuple())
@@ -22,7 +22,7 @@ class Trxn:
         self.branch_transaction_hash = bytearray(hashstr,'utf-8')
         self.current_index = None
         self.last_index = None
-        self.value_tx = False
+        self.value_trxn = isValue
         self.bundle_hash = None
         self.signature_message_fragment = None
         self.attachment_timestamp = None
@@ -32,6 +32,8 @@ class Trxn:
         self.legacy_tag = TryteString('LOCALATTACHINTERFACE9999999')
         self.tag = TryteString('LOCALATTACHINTERFACE9999999')
         self.hash = None
+        self.senderAddr = None
+        self.recAddr = None
 
     # Pass back group of trxn info for PoW
     def get_bundle_essence_trits(self):
@@ -70,6 +72,7 @@ class Trxn:
 
         return TransactionTrytes(sum).__str__()
 
+    # Increments 'nonce' for bundle hash
     def increment_legacy_tag(self):
         sum = add_trits(self.legacy_tag.as_trits(),[1])
         newSum = TryteString.from_trits(sum)

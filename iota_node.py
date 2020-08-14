@@ -10,8 +10,12 @@ from iota.crypto.signing import normalize
 import time
 from typing import MutableSequence
 from iota.types import TryteString
+from iota.crypto.addresses import AddressGenerator
+from iota.crypto.types import PrivateKey
+from iota.crypto.signing import KeyGenerator,SignatureFragmentGenerator
 import logging
 logger = logging.getLogger(__name__)
+
 libccurl_path = resource_filename("pow","libccurl.so")
 # Load ccurl lib
 _libccurl = CDLL(libccurl_path)
@@ -25,11 +29,15 @@ _libccurl.ccurl_digest_transaction.argtypes = [c_char_p]
 # Represents physical network node and hashing power
 class IOTANode:
 
-    def __init__(self,name,sig,initBal=100):
+    def __init__(self,name,initBal=100):
         self.name = name
-        self.sig = sig
         self.bal = initBal
-        self.seed = iota.crypto.types.Seed.random() # Generates random 81 character string
+        self.seed = iota.crypto.types.Seed.random() # Generates official random 81 tryte seed
+        generator = AddressGenerator(self.seed,security_level=1) # Generates IOTA address from seed
+        self.address = generator.get_addresses(start=0)
+        self.address = self.address[0].address
+        keyGen = KeyGenerator(self.seed)
+        self.privKey = keyGen.get_key(index=0,iterations=1) # Generate IOTA key from seed
 
     # Node gets data (ex: iot node gets data from sensor), will work for now in simulation
     def get_random_string(self):
@@ -58,7 +66,6 @@ class IOTANode:
             bundle.bundle_hash = bundle_hash
             # Check that we generated a secure bundle hash.
             # https://github.com/iotaledger/iota.py/issues/84
-            #TODO
             if any(13 in part for part in normalize(bundle_hash)):
                 # Increment the legacy tag and try again.
                 bundle.tail_transaction.increment_legacy_tag()
@@ -70,18 +77,21 @@ class IOTANode:
             txn.bundle_hash = bundle_hash
 
             # Initialize signature/message fragment.
-            txn.signature_message_fragment = Fragment('9' * 2187) # Fragment Length
+            if not txn.value_trxn:
+                # Put dummy message in fragment.
+                # txn.signature_message_fragment = Fragment('9' * 2187) # Fragment Length
+                txn.signature_message_fragment = Fragment(TryteString.from_string('IOTA is cool! This is a meta transaction!')) # Fragment Length
+            else:
+                # Generate signature for bundle transaction
+                txn.signature_message_fragment = self.genSig(bundleHash=bundle_hash)
+                bundle.data_payload = self.name + str(bundle.outputTrxn.value)+ bundle.outputTrxn.recName
 
         return self.conductPOW(bundle)
 
-    def __str__(self):
-        return self.name+self.sig
-
     def conductPOW(self,bundle):
         HASH_LENGTH = 243
-        mwm = 14 # minimum weight on mainnet tangle TODO: why 14?
+        mwm = 14 # minimum weight on mainnet tangle (expected 1 minute for iot device at this level)
         trailing_zeros = [0] * mwm # For checking transaction hash
-
         previoustx = None
         max_iter = 5
         i = 0
@@ -89,7 +99,7 @@ class IOTANode:
         branch_transaction_hash = bundle.branchObj.bundle_hash
         trunk_transaction_hash = bundle.trunkObj.bundle_hash
         for trxn in reversed(bundle.trxns):
-
+            startTime= time.time()
             trxn.attachment_timestamp = int(round(time.time() * 1000))
 
             while i != max_iter:
@@ -125,11 +135,19 @@ class IOTANode:
 
                 if hash_trits[-mwm:] == trailing_zeros:
                     # We are good to go, exit from while loop
-                    logger.info("Successfully conducted PoW!")
+                    totalTime= time.time() - startTime
+                    logger.info("Successfully conducted PoW for trxn "+
+                                str(trxn.current_index)+"! Time: "+str(totalTime)+" sec")
                     break
                 else:
                     i = i + 1
                     logger.info('Oops, wrong hash detected in try'
                         ' #{rounds}. Recalculating PoW... '.format(rounds= i))
 
-        return bundle.bundle_hash
+        # Tail transactions represent bundles in the tangle
+        return bundle.tail_transaction.hash
+
+    # Generates a message fragment for an input transaction.
+    def genSig(self,bundleHash):
+        fragGen = SignatureFragmentGenerator(self.privKey,bundleHash)
+        return next(fragGen)

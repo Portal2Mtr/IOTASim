@@ -19,24 +19,24 @@ class Tangle:
         # Five nodes for example
         self.tLedger = {}
         self.netNodes = []
+        self.tValues = {}
 
     # Initialize the ledger with a balance for each virtual node.
     def initLedger(self,node):
-        self.tLedger[node.name] = node.bal
+        self.tLedger[node.address] = node.bal
         self.netNodes.append(node)
 
     # Add a bundle with a trxn to the tangle and verify with PoW
     def add_tx(self,bundle: Bundle):
         if bundle.branch in self.tGraph and bundle.trunk in self.tGraph:
-            # TODO: Add realistic support for value transactions
-            if bundle.trxns[0].value_tx:
-                if self.check_value_tx(bundle.value_tx):
-                    self.move_money(bundle.value_tx['senderID'],
-                               bundle.value_tx['receiverID'],
-                               bundle.value_tx['amount'])
-                    self.tGraph[bundle.get_hash()] = [bundle.branch, bundle.trunk]
-                    self.tData[bundle.get_hash()] = {'data_payload': bundle.data_payload,
-                                                     'value_payload': bundle.value_tx}
+            if bundle.trxns[0].value != 0:
+                if self.check_value_tx(bundle):
+                    self.move_money(bundle)
+                    logHash = bundle.get_hash()
+                    self.tGraph[logHash] = [bundle.branch, bundle.trunk]
+                    self.tData[logHash] = {'data_payload': bundle.data_payload,
+                                                     'value_payload': bundle.outputTrxn.value}
+                    self.tValues[logHash] = bundle.data_payload
             else:
                 logHash = bundle.get_hash()
                 self.tGraph[logHash] = [bundle.branch, bundle.trunk]
@@ -50,20 +50,27 @@ class Tangle:
         return tuple(random.choices(tipChoices, k=2))
 
     # Check if sender has the appropriate amount of crypto to send.
-    def check_value_tx(self,value_tx):
-        if value_tx['sender'] in self.tLedger:
-            if value_tx['amount'] <= self.tLedger[value_tx['sender']]:
-                # if signature is valid too
+    def check_value_tx(self,bundle):
+        if bundle.inputTrxn.senderAddr in self.tLedger:
+            # Check if sender has the crypto...
+            if abs(bundle.inputTrxn.value) <= self.tLedger[bundle.inputTrxn.senderAddr]:
                 res = True
         return res
 
     # Moves crypto from a sender to a receiver account
-    def move_money(self,sender, receiver, amount):
-        self.tLedger[sender.name] -= amount
-        sender.bal -= amount
-        if receiver.name in self.tLedger:
-            self.tLedger[receiver.name] += amount
-            receiver.bal += amount
-        else:
-            self.tLedger[receiver.name] = amount
-            receiver.bal += amount
+    def move_money(self,bundle):
+        sendNode = None
+        recNode = None
+
+        for node in self.netNodes:
+            if node.address == bundle.inputTrxn.senderAddr:
+                sendNode = node
+
+        for node in self.netNodes:
+            if node.address == bundle.outputTrxn.recAddr:
+                recNode = node
+
+        self.tLedger[bundle.inputTrxn.senderAddr] += bundle.inputTrxn.value
+        sendNode.bal += bundle.inputTrxn.value
+        self.tLedger[bundle.outputTrxn.recAddr] += bundle.outputTrxn.value
+        recNode.bal += bundle.outputTrxn.value

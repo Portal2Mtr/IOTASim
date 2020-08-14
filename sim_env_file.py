@@ -18,14 +18,14 @@ class simEnv(tk.Tk):
 
     def __init__(self,tangle, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
-        self.geometry("500x500")
+        self.geometry("500x200")
         self.label = tk.Label(text="DAG Simulation GUI")
         self.label.pack(padx=10, pady=10)
-        self.addButton = tk.Button(text="Add trxn",command=self.addTangleTrxn)
+        self.addButton = tk.Button(text="Add Blank Meta Transaction",command=self.addTangleTrxn)
         self.addButton.pack()
         self.dispButton = tk.Button(text="Display Tangle",command=self.showTangleData)
         self.dispButton.pack()
-        self.moveButton = tk.Button(text="Move Currency",command=self.moveCryptoExample)
+        self.moveButton = tk.Button(text="Move Random Currency",command=self.moveCryptoExample)
         self.moveButton.pack()
         self.title("DAG Example GUI")
         self.simNodes = []
@@ -40,25 +40,25 @@ class simEnv(tk.Tk):
             tipObjs.append(workTangle.bundleObjects.get(tip))
 
         genBundle = Bundle(tips,tipObjs, workNode) # Generate basic bundle
-        genBundle.addTrxn(Trxn(genBundle)) # Add non-value trxn
+        metaTrxn = Trxn(genBundle)
+        genBundle.addTrxn(metaTrxn) # Add non-value trxn
         workTangle.add_tx(genBundle) # Record bundle with transaction in tangle and do PoW
 
-    #TODO Add transfers functionality
-    #Wrapper for adding real-value transaction to tangle
+    # Wrapper for adding real-value transaction to tangle
     def addTrxnTransfer(self,workTangle,sendNode,recNode,transAmount=5):
         tips = workTangle.find_tips()
         tipObjs = []
         for tip in tips:
             tipObjs.append(workTangle.bundleObjects.get(tip))
 
-        value_block = Bundle(workTangle.find_tips(), sendNode)
+        value_bundle = Bundle(workTangle.find_tips(),tipObjs, sendNode)
         # add value transition in Bundle
-        value_block.add_value_tx(sendNode, recNode, transAmount)
-        workTangle.add_tx(value_block)
+        value_bundle.add_value_tx(sendNode, recNode, transAmount)
+        workTangle.add_tx(value_bundle)
 
     # Wrapper for creating node on tangle quickly
     def createNode(self,workTangle,name,initBal=50):
-        workNode = IOTANode(name,name+"sig", initBal=initBal)
+        workNode = IOTANode(name, initBal=initBal)
         workTangle.initLedger(workNode)
         self.simNodes.append(workNode)
         return workNode
@@ -77,12 +77,12 @@ class simEnv(tk.Tk):
 
         for key, values in trxns.items():
             if values[0] is None:
-                # Genesis block
+                # Genesis transaction
                 G.add_node(key, posX=genPosX, posY=genPos1 if not gotBranch else genPos2, nodeIdx='Genesis', hash="N/A")
                 gotBranch = True
                 # genList.append(key)
             else:
-                # nongenesis block
+                # nongenesis transaction
                 G.add_node(key, posX=0, posY=0, nodeIdx=tipCntr, hash=key)
                 tipCntr += 1
                 for entry in values:
@@ -107,14 +107,14 @@ class simEnv(tk.Tk):
         # Create graph with networkx, plot in matplotlib
         G = self.drawGraph
         oldTrxns = self.oldTrxns
-        trxns = self.workingTangle.tGraph
-
-        for key, values in oldTrxns.items():
-            if key in trxns:
-                trxns.pop(key)
+        trxns = copy.deepcopy(self.workingTangle.tGraph)
+        tempDict = {}
+        for key, values in trxns.items():
+            if key not in oldTrxns:
+                tempDict[key] = values
 
         tipCntr = self.oldCntr
-        for key, values in trxns.items():
+        for key, values in tempDict.items():
             # nongenesis blocks
             G.add_node(key, posX=0, posY=0, nodeIdx=tipCntr, hash=key)
             tipCntr += 1
@@ -133,6 +133,7 @@ class simEnv(tk.Tk):
 
         self.drawGraph = G
         self.oldCntr = tipCntr
+        self.oldTrxns = copy.deepcopy(trxns)
 
     # Shows the current networkx graph generated from tangle data
     def showTangleData(self):
@@ -141,81 +142,64 @@ class simEnv(tk.Tk):
             fig, ax = plt.subplots()
             ax.set_title("DAG View of Tansaction Tangle")
             self.ax = fig.add_subplot(1, 1, 1)
-
-            for node in self.drawGraph.nodes:
-                ax.plot(self.drawGraph.nodes[node]['posX'],self.drawGraph.nodes[node]['posY'],
-                             marker="o",color='b',zorder=1,markersize=10)
-
-            for node in self.drawGraph.nodes:
-                if "genesis" not in node:
-                    for tip in self.drawGraph.neighbors(node):
-                        arrowWidth = 5
-                        arrowX = self.drawGraph.nodes[tip]['posX'] - self.drawGraph.nodes[node]['posX']
-                        arrowY = self.drawGraph.nodes[tip]['posY'] - self.drawGraph.nodes[node]['posY']
-                        ax.arrow(self.drawGraph.nodes[node]['posX'],self.drawGraph.nodes[node]['posY'],
-                                 arrowX,arrowY,head_width=arrowWidth,head_length=7,length_includes_head=True,fc="k",ec="k",zorder=2)
-
-            for node in self.drawGraph.nodes:
-                if "genesis" in node:
-                    textX = 25
-                    textY = 10
-                    ax.text(self.drawGraph.nodes[node]['posX'] - textX,self.drawGraph.nodes[node]['posY'] + textY,node)
-                else:
-                    textX = 15
-                    textY = 10
-                    ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
-                            node[0:8])
-
             self.firstDraw = False
-
         else:
-
             self.updateGraph()
             logger.info("Updated visual tangle!")
             fig, ax = plt.subplots()
 
-            for node in self.drawGraph.nodes:
-                ax.plot(self.drawGraph.nodes[node]['posX'], self.drawGraph.nodes[node]['posY'], marker="o",
-                             color='b', zorder=1, markersize=10)
+        for node in self.drawGraph.nodes:
+            ax.plot(self.drawGraph.nodes[node]['posX'],self.drawGraph.nodes[node]['posY'],
+                            marker="o",color='b',zorder=1,markersize=10)
 
-            for node in self.drawGraph.nodes:
-                if "genesis" not in node:
-                    for tip in self.drawGraph.neighbors(node):
-                        arrowWidth = 5
-                        arrowX = self.drawGraph.nodes[tip]['posX'] - self.drawGraph.nodes[node]['posX']
-                        arrowY = self.drawGraph.nodes[tip]['posY'] - self.drawGraph.nodes[node]['posY']
-                        ax.arrow(self.drawGraph.nodes[node]['posX'], self.drawGraph.nodes[node]['posY'],
-                                      arrowX, arrowY, head_width=arrowWidth, head_length=7, length_includes_head=True,
-                                      fc="k", ec="k", zorder=2)
+        for node in self.drawGraph.nodes:
+            if "genesis" not in node:
+                for tip in self.drawGraph.neighbors(node):
+                    arrowWidth = 5
+                    arrowX = self.drawGraph.nodes[tip]['posX'] - self.drawGraph.nodes[node]['posX']
+                    arrowY = self.drawGraph.nodes[tip]['posY'] - self.drawGraph.nodes[node]['posY']
+                    ax.arrow(self.drawGraph.nodes[node]['posX'],self.drawGraph.nodes[node]['posY'],
+                                 arrowX,arrowY,head_width=arrowWidth,head_length=7,length_includes_head=True,fc="k",ec="k",zorder=2)
 
-            for node in self.drawGraph.nodes:
-                if "genesis" in node:
+        for node in self.drawGraph.nodes:
+            if "genesis" in node:
+                textX = 25
+                textY = 10
+                ax.text(self.drawGraph.nodes[node]['posX'] - textX,self.drawGraph.nodes[node]['posY'] + textY,node)
+            else:
+                textX = 25
+                textY = 10
+                ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
+                            node[0:8])
+
+                if node in self.workingTangle.tValues:
                     textX = 25
-                    textY = 10
+                    textY = -40
                     ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
-                                 node)
-                else:
-                    textX = 15
-                    textY = 10
-                    ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
-                                 node[0:8])
+                            self.workingTangle.tValues[node],c='g')
 
         plt.draw()
         plt.axis("off")
         plt.show()
 
-    #
+
+    # Adds transaction to Tangle from tkinter gui
     def addTangleTrxn(self):
         selectInt = random.randint(0, len(self.simNodes) - 1)
         self.addTrxn(self.workingTangle,self.simNodes[selectInt])
-        print("Added trxn from node " + self.simNodes[selectInt].name + "!")
+        logger.info("Added trxn from node " + self.simNodes[selectInt].name + "!")
 
-    # TODO
+
+    # Moves crypto between two random nodes with tkinter gui
     def moveCryptoExample(self):
         fromInt = random.randint(0, len(self.simNodes) - 1)
         toInt = random.randint(0, len(self.simNodes) - 1)
+        while toInt == fromInt:
+            toInt = random.randint(0, len(self.simNodes) - 1)
+
+        logger.info("Moving crypto from " + self.simNodes[fromInt].name + " to " + self.simNodes[toInt].name + "...")
         self.addTrxnTransfer(self.workingTangle, self.simNodes[fromInt], self.simNodes[toInt])
-        print("Moved " + str(5) + " crypto from " + self.simNodes[fromInt].name + " to " + self.simNodes[toInt].name + "!")
+        logger.info("Moved " + str(5) + " crypto from " + self.simNodes[fromInt].name + " to " + self.simNodes[toInt].name + "!")
 
 
 
