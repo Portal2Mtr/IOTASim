@@ -18,12 +18,6 @@ logger = logging.getLogger(__name__)
 
 __author__ = "Charles Rawlins"
 __copyright__ = "Copyright 2020"
-__license__ = "GPL"
-__version__ = "1.0.1"
-__maintainer__ = "Charles Rawlins"
-__email__ = "crfmb@mst.edu"
-__status__ = "Prototype"
-
 
 def configure_logging():
     """Configures the logger for the entire project.
@@ -60,14 +54,14 @@ if __name__ == "__main__":
 
     # Generate simple main tangle actors
     logger.info("Establishing main tangle actors...")
-    charlesNode = workEnv.createNode(myTangle,"charles",initBal=50)
-    satoshiNode = workEnv.createNode(myTangle,"satoshi",initBal=100)
-    jagNode = workEnv.createNode(myTangle,"drjag",initBal=200)
-    ericNode = workEnv.createNode(myTangle,"eric",initBal=25)
-    emilyNode = workEnv.createNode(myTangle,"emily",initBal=500)
+    charlesNode = workEnv.createNode(myTangle,"charles")
+    satoshiNode = workEnv.createNode(myTangle,"satoshi")
+    jagNode = workEnv.createNode(myTangle,"drjag")
+    ericNode = workEnv.createNode(myTangle,"eric")
+    emilyNode = workEnv.createNode(myTangle,"emily")
 
     # Build tangle with empty trxns
-    numTrxns = 5
+    numTrxns = 10
     logger.info("Building basic tangle with " + str(numTrxns) + " trxns...")
     for i in range(numTrxns):
         logger.info("Generating {}/{}...".format(i+1,numTrxns))
