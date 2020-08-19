@@ -84,7 +84,7 @@ class IOTANode:
             else:
                 # Generate signature for bundle transaction
                 txn.signature_message_fragment = self.genSig(bundleHash=bundle_hash)
-                bundle.data_payload = self.name + str(bundle.outputTrxn.value)+ bundle.outputTrxn.recName
+                bundle.data_payload = self.name + " (" + str(bundle.outputTrxn.value) +") ->"+ bundle.outputTrxn.recName
 
         return self.conductPOW(bundle)
 
@@ -137,7 +137,7 @@ class IOTANode:
                     # We are good to go, exit from while loop
                     totalTime= time.time() - startTime
                     logger.info("Successfully conducted PoW for trxn "+
-                                str(trxn.current_index)+"! Time: "+str(totalTime)+" sec")
+                                str(trxn.current_index)+"! Time: {:.4g}".format(totalTime) +" sec")
                     break
                 else:
                     i = i + 1

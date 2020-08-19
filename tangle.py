@@ -1,5 +1,6 @@
 import random
 from bundle import Bundle
+
 # Manages the tangle in its entirety, several tangle Nodes and many bundles.
 class Tangle:
     def __init__(self):
@@ -35,7 +36,7 @@ class Tangle:
                     logHash = bundle.get_hash()
                     self.tGraph[logHash] = [bundle.branch, bundle.trunk]
                     self.tData[logHash] = {'data_payload': bundle.data_payload,
-                                                     'value_payload': bundle.outputTrxn.value}
+                                                     'value_payloafdd': bundle.outputTrxn.value}
                     self.tValues[logHash] = bundle.data_payload
             else:
                 logHash = bundle.get_hash()

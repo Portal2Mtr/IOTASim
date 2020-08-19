@@ -80,7 +80,6 @@ class simEnv(tk.Tk):
                 # Genesis transaction
                 G.add_node(key, posX=genPosX, posY=genPos1 if not gotBranch else genPos2, nodeIdx='Genesis', hash="N/A")
                 gotBranch = True
-                # genList.append(key)
             else:
                 # nongenesis transaction
                 G.add_node(key, posX=0, posY=0, nodeIdx=tipCntr, hash=key)
@@ -138,15 +137,14 @@ class simEnv(tk.Tk):
     # Shows the current networkx graph generated from tangle data
     def showTangleData(self):
         # Draw manually for live plotting
-        if self.firstDraw:
-            fig, ax = plt.subplots()
-            ax.set_title("DAG View of Tansaction Tangle")
-            self.ax = fig.add_subplot(1, 1, 1)
-            self.firstDraw = False
-        else:
-            self.updateGraph()
-            logger.info("Updated visual tangle!")
-            fig, ax = plt.subplots()
+
+        fig, ax = plt.subplots()
+        ax.set_title("DAG View of Tansaction Tangle")
+        self.ax = fig.add_subplot(1, 1, 1)
+
+
+        self.updateGraph()
+        logger.info("Updated visual tangle!")
 
         for node in self.drawGraph.nodes:
             ax.plot(self.drawGraph.nodes[node]['posX'],self.drawGraph.nodes[node]['posY'],
@@ -174,7 +172,7 @@ class simEnv(tk.Tk):
 
                 if node in self.workingTangle.tValues:
                     textX = 25
-                    textY = -40
+                    textY = -20
                     ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
                             self.workingTangle.tValues[node],c='g')
 

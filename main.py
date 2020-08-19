@@ -61,7 +61,7 @@ if __name__ == "__main__":
     emilyNode = workEnv.createNode(myTangle,"emily")
 
     # Build tangle with empty trxns
-    numTrxns = 10
+    numTrxns = 5
     logger.info("Building basic tangle with " + str(numTrxns) + " trxns...")
     for i in range(numTrxns):
         logger.info("Generating {}/{}...".format(i+1,numTrxns))
