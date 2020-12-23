@@ -156,22 +156,22 @@ class simEnv(tk.Tk):
                     arrowWidth = 5
                     arrowX = self.drawGraph.nodes[tip]['posX'] - self.drawGraph.nodes[node]['posX']
                     arrowY = self.drawGraph.nodes[tip]['posY'] - self.drawGraph.nodes[node]['posY']
-                    ax.arrow(self.drawGraph.nodes[node]['posX'],self.drawGraph.nodes[node]['posY'],
+                    ax.arrow(self.drawGraph.nodes[node]['posX'], self.drawGraph.nodes[node]['posY'],
                                  arrowX,arrowY,head_width=arrowWidth,head_length=7,length_includes_head=True,fc="k",ec="k",zorder=2)
 
         for node in self.drawGraph.nodes:
             if "genesis" in node:
-                textX = 25
+                textX = 20
                 textY = 10
                 ax.text(self.drawGraph.nodes[node]['posX'] - textX,self.drawGraph.nodes[node]['posY'] + textY,node)
             else:
-                textX = 25
+                textX = 20
                 textY = 10
                 ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
                             node[0:8])
 
                 if node in self.workingTangle.tValues:
-                    textX = 25
+                    textX = 20
                     textY = -20
                     ax.text(self.drawGraph.nodes[node]['posX'] - textX, self.drawGraph.nodes[node]['posY'] + textY,
                             self.workingTangle.tValues[node],c='g')

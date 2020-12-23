@@ -98,6 +98,7 @@ class IOTANode:
 
         branch_transaction_hash = bundle.branchObj.bundle_hash
         trunk_transaction_hash = bundle.trunkObj.bundle_hash
+
         for trxn in reversed(bundle.trxns):
             startTime= time.time()
             trxn.attachment_timestamp = int(round(time.time() * 1000))

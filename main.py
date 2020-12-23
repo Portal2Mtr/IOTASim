@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 __author__ = "Charles Rawlins"
 __copyright__ = "Copyright 2020"
 
+
 def configure_logging():
     """Configures the logger for the entire project.
 
@@ -54,11 +55,11 @@ if __name__ == "__main__":
 
     # Generate simple main tangle actors
     logger.info("Establishing main tangle actors...")
-    charlesNode = workEnv.createNode(myTangle,"charles")
-    satoshiNode = workEnv.createNode(myTangle,"satoshi")
-    jagNode = workEnv.createNode(myTangle,"drjag")
-    ericNode = workEnv.createNode(myTangle,"eric")
-    emilyNode = workEnv.createNode(myTangle,"emily")
+    charlesNode = workEnv.createNode(myTangle,"Charles")
+    satoshiNode = workEnv.createNode(myTangle,"Satoshi")
+    jagNode = workEnv.createNode(myTangle,"Bob")
+    ericNode = workEnv.createNode(myTangle,"Eric")
+    emilyNode = workEnv.createNode(myTangle,"Emily")
 
     # Build tangle with empty trxns
     numTrxns = 5
